@@ -109,12 +109,27 @@ public:
 				_stopRequested = false;
 				_taskTxEnabled = true;
 
+				//Send bind
+                std::size_t tasksCount = _taskManager->getTasksCount();
                 _txPacket.header.id = Common::PacketId::Bind;
+                _txPacket.header.size = sizeof(tasksCount);
+                memcpy(_txPacket.payload.data(), &tasksCount, sizeof(tasksCount));
         		_bindRequested = false;
                 LFramework::Threading::CriticalSection::unlock(v);
         		writePacketBlocking();
         		lfDebug() << "Bind response sent";
 
+        		//send tasks list
+        		for(std::size_t i = 0; i < tasksCount; ++i){
+        			LFramework::Guid taskId;
+        			if(_taskManager->getTaskId(i, taskId)){
+        				_txPacket.header.id = Common::PacketId::TaskDescription;
+						_txPacket.header.size = sizeof(tasksCount);
+						memcpy(_txPacket.payload.data(), &taskId, sizeof(taskId));
+						writePacketBlocking();
+						lfDebug() << "Task description sent";
+        			}
+        		}
         	}else{
                 LFramework::Threading::CriticalSection::unlock(v);
         	}

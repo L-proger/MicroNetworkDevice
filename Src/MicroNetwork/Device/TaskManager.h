@@ -1,20 +1,15 @@
 #pragma once
 
-#include <MicroNetwork/Common/Packet.h>
-#include <MicroNetwork/Device/ITaskContext.h>
-#include <MicroNetwork/Common/IDataReceiver.h>
+#include <MicroNetwork/Device/Task.h>
+#include <LFramework/Guid.h>
 
 namespace MicroNetwork::Device {
-
-    class Task : public Common::IDataReceiver {
-	public:
-		virtual ~Task() = default;
-		virtual void run(ITaskContext* context) = 0;
-	};
 
 	class TaskManager {
 	public:
 		virtual ~TaskManager() = default;
+		virtual std::size_t getTasksCount() = 0;
+		virtual bool getTaskId(std::size_t id, LFramework::Guid& result) = 0;
 		virtual Task* createTask() = 0;
 		virtual void deleteTask(Task* task) = 0;
 	};
