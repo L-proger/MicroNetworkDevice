@@ -124,7 +124,7 @@ public:
         			LFramework::Guid taskId;
         			if(_taskManager->getTaskId(i, taskId)){
         				_txPacket.header.id = Common::PacketId::TaskDescription;
-						_txPacket.header.size = sizeof(tasksCount);
+						_txPacket.header.size = sizeof(taskId);
 						memcpy(_txPacket.payload.data(), &taskId, sizeof(taskId));
 						writePacketBlocking();
 						lfDebug() << "Task description sent";
