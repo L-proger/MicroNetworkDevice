@@ -10,6 +10,7 @@
 #include <LFramework/Threading/Semaphore.h>
 #include <LFramework/Threading/Thread.h>
 #include <MicroNetwork/Device/ITaskContext.h>
+#include <MicroNetwork/Device/ITask.h>
 #include "TaskManager.h"
 #include <atomic>
 
@@ -17,7 +18,7 @@ namespace MicroNetwork::Device {
 
 class Node : public Common::DataStream {
 public:
-    class TaskContext : public ITaskContext {
+    class TaskContext : public LFramework::ComImplement<TaskContext, LFramework::ComObject, ITaskContext> {
 	public:
 		TaskContext(Node* node):_node(node){
 
@@ -32,44 +33,46 @@ public:
 			return true;
 		}
 
-        bool packet(Common::PacketHeader header, const void* data) override {
+        bool packet(Common::PacketHeader header, const void* data) {
 			return _node->writePacket(header, data);
 		}
 
-		void readPackets() override {
+        LFramework::Result readPackets() {
 			while(true){
                 LFramework::Threading::CriticalSection lock;
 				if(!readPacket()){
-					break;
+					return LFramework::Result::OutOfMemory;
 				}else{
-					_currentTask.load()->packet(_packet.header, _packet.payload.data());
+					_currentTask->packet(_packet.header, _packet.payload.data());
 				}
 			}
+			return LFramework::Result::Ok;
 		}
 
-		void processTask(Task* task) {
+		void processTask(LFramework::ComPtr<ITask> task) {
 			{
                 LFramework::Threading::CriticalSection lock;
 				_rxBuffer.clear();
 				_exitRequested = false;
 				_currentTask = task;
 			}
-			_currentTask.load()->run(this);
+			_currentTask->run(this->queryInterface<ITaskContext>());
 		}
 
 		void requestExit() {
 			{
                 LFramework::Threading::CriticalSection lock;
 				_exitRequested = true;
-				auto task = _currentTask.load();
+				/*auto task = _currentTask.load();
 				if(task != nullptr){
 					//task->
-				}
+				}*/
 			}
 		}
 
-		bool isExitRequested() override {
-			return _exitRequested;
+		LFramework::Result isExitRequested(bool& result) {
+			result = _exitRequested;
+			return LFramework::Result::Ok;
 		}
 	private:
 		bool readPacket() {
@@ -82,7 +85,8 @@ public:
 			_rxBuffer.read(&_packet, _packet.header.fullSize());
 			return true;
 		}
-		std::atomic<Task*> _currentTask = nullptr;
+
+		LFramework::ComPtr<ITask> _currentTask;
 		bool _exitRequested = false;
 		Node* _node;
         Common::MaxPacket _packet;
@@ -93,6 +97,7 @@ public:
 
 	Node(TaskManager* taskManager) : _taskManager(taskManager){
 		_taskContext = new TaskContext(this);
+		_taskContext->addRef();
 	}
 
     bool start() override {
@@ -198,10 +203,15 @@ protected:
     	lfDebug() << "Running task";
     	_taskContext->processTask(task);
     	lfDebug() << "Deleting task";
-    	_taskManager->deleteTask(task);
+    	task = nullptr;
         _txPacket.header.id = Common::PacketId::TaskStop;
     	writePacketBlocking();
     	lfDebug() << "Task stopped";
+    }
+
+
+    void onRemoteDisconnect() override {
+
     }
 
     void onRemoteDataAvailable() override {
@@ -221,7 +231,9 @@ protected:
 				_stopRequested = true;
 
             }else if(_rxPacket.header.id == Common::PacketId::TaskStart){
+            	_remote->peek(&_rxPacket, _rxPacket.header.fullSize());
 				_remote->discard(_rxPacket.header.fullSize());
+				_rxPacket.getData(_taskId);
 				lfDebug() << "Start task requested";
 				_startRequested = true;
 			}else{
@@ -248,6 +260,7 @@ private:
     TaskContext* _taskContext = nullptr;
     Common::MaxPacket _rxPacket;
     Common::MaxPacket _txPacket;
+    LFramework::Guid _taskId;
     TaskManager* _taskManager = nullptr;
     std::atomic<bool> _stopRequested = false;
     std::atomic<bool> _startRequested = false;

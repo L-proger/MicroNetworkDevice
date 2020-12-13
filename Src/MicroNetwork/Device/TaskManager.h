@@ -1,7 +1,7 @@
 #pragma once
 
-#include <MicroNetwork/Device/Task.h>
 #include <LFramework/Guid.h>
+#include <MicroNetwork/Device/ITask.h>
 
 namespace MicroNetwork::Device {
 
@@ -10,8 +10,7 @@ namespace MicroNetwork::Device {
 		virtual ~TaskManager() = default;
 		virtual std::size_t getTasksCount() = 0;
 		virtual bool getTaskId(std::size_t id, LFramework::Guid& result) = 0;
-		virtual Task* createTask() = 0;
-		virtual void deleteTask(Task* task) = 0;
+		virtual LFramework::ComPtr<ITask> createTask() = 0;
 	};
 
 }

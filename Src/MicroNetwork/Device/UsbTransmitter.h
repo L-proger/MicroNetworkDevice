@@ -29,6 +29,10 @@ public:
 	}
 
 protected:
+	void onRemoteDisconnect() override {
+
+	}
+
 	  void onRemoteDataAvailable() override {
           LFramework::Threading::CriticalSection lock;
 		  if(!_isTransmitting){
