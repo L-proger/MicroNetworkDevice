@@ -33,8 +33,11 @@ public:
 			return true;
 		}
 
-        bool packet(Common::PacketHeader header, const void* data) {
-			return _node->writePacket(header, data);
+        LFramework::Result packet(Common::PacketHeader header, const void* data) {
+			if(_node->writePacket(header, data)){
+				return LFramework::Result::Ok;
+			}
+			return LFramework::Result::OutOfMemory;
 		}
 
         LFramework::Result readPackets() {
@@ -56,7 +59,12 @@ public:
 				_exitRequested = false;
 				_currentTask = task;
 			}
-			_currentTask->run(this->queryInterface<ITaskContext>());
+			auto t = this->queryInterface<ITaskContext>();
+
+			bool b;
+			t->isExitRequested(b);
+
+			_currentTask->run(t);
 		}
 
 		void requestExit() {
