@@ -33,26 +33,22 @@ protected:
 
 	}
 
-	  void onRemoteDataAvailable() override {
-          LFramework::Threading::CriticalSection lock;
-		  if(!_isTransmitting){
-			  startTxTransfer();
-		  }
-
-	  }
-	  void onReadBytes() override {
-          LFramework::Threading::CriticalSection lock;
-		  if(freeSpace() >= MaxPacketSize){
-			  startRxTransfer();
-		  }
-	  }
-	  void onRemoteReset() override {
-		  for(;;);
-	  }
+	void onRemoteDataAvailable() override {
+		LFramework::Threading::CriticalSection lock;
+		continueUsbTx();
+	}
+	void onReadBytes() override {
+		LFramework::Threading::CriticalSection lock;
+		if(freeSpace() >= MaxPacketSize){
+			startRxTransfer();
+		}
+	}
+	void onRemoteReset() override {
+		for(;;);
+	}
 private:
 
     void onReceivedPacket(LFramework::USB::UsbTransfer * transfer, bool isOk) {
-		//lfDebug() << "USB rx";
 		if(transfer->actualSize == 0) {
 			reset();
 			if(!_isTransmitting) {
@@ -76,33 +72,33 @@ private:
 		return _isTransmitting;
 	}
 
-	bool startTxTransfer() {
-            LFramework::Threading::CriticalSection lock;
-
-
-			auto txSize = _remote->read(_txBuffer, sizeof(_txBuffer));
-			if(txSize != 0) {
-				_txTransfer.size = txSize;
-				_isTransmitting = true;
-				auto status = _txEndpoint->transferAsync(&_txTransfer);
-				if(!status){
-					lfDebug() << "Assert: failed to start TX transfer";
-					for(;;);
-				}
-
-				return true;
-			}
-			return false;
+	void continueUsbTx() {
+		LFramework::Threading::CriticalSection lock;
+		if(_isTransmitting){
+			return;
 		}
+
+		auto txSize = _remote->read(_txBuffer, sizeof(_txBuffer));
+		if(txSize != 0) {
+			_txTransfer.size = txSize;
+			//lfDebug() << "USB begin tx: " << txSize;
+			_isTransmitting = _txEndpoint->transferAsync(&_txTransfer);
+			if(!_isTransmitting){
+				lfDebug() << "Assert: failed to start TX transfer";
+				for(;;);
+			}
+		}
+	}
 
 
     void onTramsmittedPacket(LFramework::USB::UsbTransfer* transfer, bool isOk) {
-		//lfDebug() << "USB tx";
+		//lfDebug() << "USB tx done: " << transfer->size;
         LFramework::Threading::CriticalSection lock;
+        _isTransmitting = false;
 		if(!_synchronized) {
 			_synchronized = sendSyncPacket();
 		} else {
-			_isTransmitting = startTxTransfer();
+			continueUsbTx();
 		}
 
 	}
@@ -124,7 +120,7 @@ private:
 	}
 
 	bool _synchronized = false;
-	std::atomic<bool> _isTransmitting = false;
+	bool _isTransmitting = false;
 
 	uint8_t _rxBuffer[MaxPacketSize];
 	uint8_t _txBuffer[MaxPacketSize];

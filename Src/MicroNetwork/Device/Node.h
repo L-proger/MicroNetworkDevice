@@ -119,7 +119,6 @@ public:
         	if(_bindRequested){
         		lfDebug() << "Bind request detected";
         		_startRequested = false;
-				_stopRequested = false;
 				_taskTxEnabled = true;
 
 				//Send bind
@@ -177,10 +176,15 @@ public:
 
     }
 
-    void writePacketBlocking() {
-    	while(!writePacket(_txPacket.header, _txPacket.payload.data()) && _taskTxEnabled){
-            LFramework::Threading::ThisThread::sleepForMs(1);
+    bool writePacketBlocking() {
+    	while(_taskTxEnabled){
+    		if(writePacket(_txPacket.header, _txPacket.payload.data())){
+    			return true;
+    		}else{
+    			LFramework::Threading::ThisThread::sleepForMs(1);
+    		}
     	}
+    	return false;
     }
 
     bool writePacket(Common::PacketHeader header, const void* data) {
@@ -198,25 +202,23 @@ public:
     	}
     	return false;
     }
-
-
 protected:
-
     void processTask() {
-    	lfDebug() << "Creating task";
+    	//lfDebug() << "Node: Creating task";
     	auto task = _taskManager->createTask();
-    	lfDebug() << "Sending task start";
+    	//lfDebug() << "Sending task start";
         _txPacket.header.id = Common::PacketId::TaskStart;
+        _txPacket.header.size = 0;
     	writePacketBlocking();
-    	lfDebug() << "Running task";
+    	//lfDebug() << "Node: Running task";
     	_taskContext->processTask(task);
-    	lfDebug() << "Deleting task";
+    	//lfDebug() << "Node: Deleting task";
     	task = nullptr;
         _txPacket.header.id = Common::PacketId::TaskStop;
+        _txPacket.header.size = 0;
     	writePacketBlocking();
-    	lfDebug() << "Task stopped";
+    	//lfDebug() << "Node: TaskStop sent";
     }
-
 
     void onRemoteDisconnect() override {
 
@@ -232,17 +234,17 @@ protected:
     			break;
     		}
 
-    		lfDebug() << "Received packet!";
+    		//lfDebug() << "Received packet!";
             if(_rxPacket.header.id == Common::PacketId::TaskStop){
 				_remote->discard(_rxPacket.header.fullSize());
-				lfDebug() << "Stop task requested";
-				_stopRequested = true;
+				//lfDebug() << "Stop task requested";
+				_taskContext->requestExit();
 
             }else if(_rxPacket.header.id == Common::PacketId::TaskStart){
             	_remote->peek(&_rxPacket, _rxPacket.header.fullSize());
 				_remote->discard(_rxPacket.header.fullSize());
 				_rxPacket.getData(_taskId);
-				lfDebug() << "Start task requested";
+				//lfDebug() << "Start task requested";
 				_startRequested = true;
 			}else{
 				_remote->peek(&_rxPacket, _rxPacket.header.fullSize());
@@ -270,7 +272,6 @@ private:
     Common::MaxPacket _txPacket;
     LFramework::Guid _taskId;
     TaskManager* _taskManager = nullptr;
-    std::atomic<bool> _stopRequested = false;
     std::atomic<bool> _startRequested = false;
     std::atomic<bool> _bindRequested = false;
     std::atomic<bool> _taskTxEnabled = false;
