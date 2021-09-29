@@ -1,0 +1,9 @@
+target_sources(MicroNetworkDevice
+	INTERFACE
+		ITask.h
+		ITaskContext.h
+		Node.h
+		Task.h
+		TaskManager.h
+		UsbTransmitter.h
+)

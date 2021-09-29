@@ -25,7 +25,7 @@ public:
 		}
         bool receivePacketFromNetwork(const Common::PacketHeader& header, const void* data){
             LFramework::Threading::CriticalSection lock;
-			if(_rxBuffer.sizeAvailable() < header.fullSize()){
+			if(_rxBuffer.sizeAvailable() < MicroNetwork::Common::packetFullSize(header)){
 				return false;
 			}
 			_rxBuffer.write(&header, sizeof(header));
@@ -87,10 +87,10 @@ public:
 			if(!_rxBuffer.peek(&_packet.header, sizeof(_packet.header))){
 				return false;
 			}
-			if(_rxBuffer.size() < _packet.header.fullSize()) {
+			if(_rxBuffer.size() < MicroNetwork::Common::packetFullSize(_packet.header)) {
 				return false;
 			}
-			_rxBuffer.read(&_packet, _packet.header.fullSize());
+			_rxBuffer.read(&_packet, MicroNetwork::Common::packetFullSize(_packet.header));
 			return true;
 		}
 
@@ -230,26 +230,29 @@ protected:
     		if(_remote->peek(&_rxPacket.header, sizeof(_rxPacket.header)) != sizeof(_rxPacket.header)){
     			break;
     		}
-    		if(_remote->bytesAvailable() < _rxPacket.header.fullSize()){
+
+            const auto packetFullSize = MicroNetwork::Common::packetFullSize(_rxPacket.header);
+            
+    		if(_remote->bytesAvailable() < packetFullSize) {
     			break;
     		}
 
     		//lfDebug() << "Received packet!";
             if(_rxPacket.header.id == Common::PacketId::TaskStop){
-				_remote->discard(_rxPacket.header.fullSize());
+				_remote->discard(packetFullSize);
 				//lfDebug() << "Stop task requested";
 				_taskContext->requestExit();
 
             }else if(_rxPacket.header.id == Common::PacketId::TaskStart){
-            	_remote->peek(&_rxPacket, _rxPacket.header.fullSize());
-				_remote->discard(_rxPacket.header.fullSize());
+            	_remote->peek(&_rxPacket, packetFullSize);
+				_remote->discard(packetFullSize);
 				_rxPacket.getData(_taskId);
 				//lfDebug() << "Start task requested";
 				_startRequested = true;
 			}else{
-				_remote->peek(&_rxPacket, _rxPacket.header.fullSize());
+				_remote->peek(&_rxPacket, packetFullSize);
 				if(_taskContext->receivePacketFromNetwork(_rxPacket.header, _rxPacket.payload.data())){
-					_remote->discard(_rxPacket.header.fullSize());
+					_remote->discard(packetFullSize);
 				}
 			}
     	}
