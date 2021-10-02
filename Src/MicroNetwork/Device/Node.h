@@ -1,5 +1,6 @@
 #pragma once
 
+#include <MicroNetwork.Device.h>
 #include <MicroNetwork/Common/Packet.h>
 #include <MicroNetwork/Common/DataStream.h>
 #include <LFramework/Debug.h>
@@ -9,8 +10,7 @@
 #include <LFramework/Threading/CriticalSection.h>
 #include <LFramework/Threading/Semaphore.h>
 #include <LFramework/Threading/Thread.h>
-#include <MicroNetwork/Device/ITaskContext.h>
-#include <MicroNetwork/Device/ITask.h>
+
 #include "TaskManager.h"
 #include <atomic>
 
@@ -20,8 +20,10 @@ class Node : public Common::DataStream {
 public:
     class TaskContext : public LFramework::ComImplement<TaskContext, LFramework::ComObject, ITaskContext> {
 	public:
-		TaskContext(Node* node):_node(node){
 
+        
+		TaskContext(Node* node):_node(node){
+            static_assert(LFramework::HasInterfaceWrapper<MicroNetwork::Device::ITask>::value, "NO WRAPPER");
 		}
         bool receivePacketFromNetwork(const Common::PacketHeader& header, const void* data){
             LFramework::Threading::CriticalSection lock;

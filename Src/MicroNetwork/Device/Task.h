@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MicroNetwork/Device/ITask.h>
+#include <MicroNetwork.Device.h>
 #include <MicroNetwork/Common/Packet.h>
 
 namespace MicroNetwork::Device {

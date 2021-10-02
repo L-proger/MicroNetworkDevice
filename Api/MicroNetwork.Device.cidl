@@ -1,0 +1,10 @@
+[Guid("FCFF1D12-3DA5-49D9-A860-A61D279486BB")]
+interface ITaskContext : MicroNetwork.Common.IDataReceiver {
+	void readPackets();
+    bool isExitRequested();
+}
+
+[Guid("F00576E3-8670-4E21-9D21-006B466286FB")]
+interface ITask : MicroNetwork.Common.IDataReceiver {
+	void run(MicroNetwork.Device.ITaskContext context);
+}

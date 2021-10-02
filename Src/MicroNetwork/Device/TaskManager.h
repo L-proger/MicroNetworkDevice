@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LFramework/Guid.h>
-#include <MicroNetwork/Device/ITask.h>
+#include <MicroNetwork.Device.h>
 
 namespace MicroNetwork::Device {
 
