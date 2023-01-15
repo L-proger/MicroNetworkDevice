@@ -10,7 +10,7 @@ namespace MicroNetwork::Device {
 		virtual ~TaskManager() = default;
 		virtual std::size_t getTasksCount() = 0;
 		virtual bool getTaskId(std::size_t id, LFramework::Guid& result) = 0;
-		virtual LFramework::ComPtr<ITask> createTask() = 0;
+		virtual LFramework::ComPtr<ITask> createTask(LFramework::Guid& taskId) = 0;
 	};
 
 }

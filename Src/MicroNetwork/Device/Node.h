@@ -207,7 +207,7 @@ public:
 protected:
     void processTask() {
     	//lfDebug() << "Node: Creating task";
-    	auto task = _taskManager->createTask();
+    	auto task = _taskManager->createTask(_taskId);
     	//lfDebug() << "Sending task start";
         _txPacket.header.id = Common::PacketId::TaskStart;
         _txPacket.header.size = 0;
